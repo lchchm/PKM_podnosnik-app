@@ -1,0 +1,9 @@
+# NIGDY nie pushuj tego pliku — zawiera hasła i tokeny!
+.streamlit/secrets.toml
+
+__pycache__/
+*.pyc
+.env
+.DS_Store
+venv/
+.venv/
