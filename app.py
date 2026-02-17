@@ -35,7 +35,7 @@ code, .stCode, [data-testid="stMetricValue"] { font-family: 'JetBrains Mono', mo
 }
 
 .stApp { background-color: #0d1117; }
-.main .block-container { padding-top: 4.5rem; padding-bottom: 2rem; }
+.main .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
 
 h1 { font-family: 'Syne', sans-serif !important; font-weight: 800 !important;
      color: #e8edf8 !important; letter-spacing: -0.02em; }
@@ -637,125 +637,6 @@ def section_wal(wyniki: dict, klucz: str, tytul: str):
     render_alerts(w.get("errors", []), w.get("warnings", []))
 
 
-def tab_kalkulator_lozyska(inp: dict):
-    st.markdown("""
-    <div style='margin-bottom:1rem;'>
-        <h1>🔵 Kalkulator Łożysk</h1>
-        <p style='color:#4a5a7a; font-size:0.88rem; margin-top:-0.5rem;'>
-            Weryfikacja wybranego łożyska wg ISO 281
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="tip-box">
-    💡 <b>Jak korzystać?</b> Wybierz typ łożyska, wpisz parametry z noty katalogowej
-    (SKF, NSK, FAG) i kliknij <b>SPRAWDŹ</b>. Program powie czy łożysko wytrzyma
-    i jaka będzie jego rzeczywista żywotność. Powtarzaj aż wyniki będą zielone.
-    </div>
-    """, unsafe_allow_html=True)
-
-    TYPY = {
-        "kulkowe_skosne_dwurzedowe": "Kulkowe skośne dwurzędowe (3206, 3306)",
-        "kulkowe_jednorzedowe":      "Kulkowe jednorzędowe (6206, 6306)",
-        "kulkowe_oporowe":           "Kulkowe oporowe (51206)",
-        "walcowe_oporowe":           "Wałeczkowe oporowe (81206, 89306)",
-        "stozkowe":                  "Stożkowe (32206, 32306)",
-        "barylkowe_oporowe":         "Baryłkowe oporowe (29406)",
-    }
-
-    col_l, col_r = st.columns([1, 1])
-
-    with col_l:
-        st.markdown("### Parametry łożyska")
-        typ = st.selectbox("Typ łożyska", options=list(TYPY.keys()),
-                           format_func=lambda k: TYPY[k], key="loz_typ")
-        d_wew = st.number_input("Średnica wewnętrzna d [mm]", 5.0, 500.0, 30.0, 1.0,
-                                key="loz_d",
-                                help="Średnica otworu łożyska = średnica czopa wału")
-        st.markdown("**Dane z noty katalogowej**")
-        c1, c2 = st.columns(2)
-        C_kat  = c1.number_input("Nośność dynamiczna C [kN]",  0.1, 2000.0, 30.0, 0.5, key="loz_C")
-        C0_kat = c2.number_input("Nośność statyczna C₀ [kN]", 0.1, 2000.0, 20.0, 0.5, key="loz_C0")
-
-        st.markdown("**Współczynniki obciążenia** (z katalogu)")
-        st.caption("Kulkowe skośne dwurzędowe: typowo X=0.67, Y≈0.67 (α=30°)")
-        is_oporowe = typ in ("kulkowe_oporowe", "walcowe_oporowe", "barylkowe_oporowe")
-        X_default  = 1.0 if is_oporowe else 0.67
-        Y_default  = 1.0 if is_oporowe else 0.67
-        cx1, cx2 = st.columns(2)
-        X_val = cx1.number_input("Współczynnik X", 0.0, 2.0, X_default, 0.01,
-                                  key="loz_X", disabled=is_oporowe)
-        Y_val = cx2.number_input("Współczynnik Y", 0.0, 5.0, Y_default, 0.01, key="loz_Y_kal")
-        if is_oporowe:
-            st.caption("ℹ️ Łożyska oporowe przenoszą wyłącznie siłę osiową.")
-
-    with col_r:
-        st.markdown("### Obciążenia i wymagania")
-        st.caption("Siły pobrane automatycznie z założeń — możesz nadpisać")
-        Fa_N = st.number_input("Siła osiowa Fa [N]", 0.0, 500000.0,
-                               float(inp.get("sila_F", 10000.0)), 100.0, key="loz_Fa",
-                               help="= siła podnoszona przez śrubę")
-        Fr_N = st.number_input("Siła promieniowa Fr [N]", 0.0, 100000.0, 0.0, 10.0,
-                               key="loz_Fr",
-                               help="= siła obwodowa od pasa (Fo2 z wyników przekładni)")
-        n_val  = st.number_input("Prędkość obrotowa n [obr/min]", 1.0, 10000.0,
-                                 float(inp.get("n_sruby", 177.5)), 10.0, key="loz_n")
-        Lh_val = st.number_input("Wymagana żywotność Lh [h]", 100.0, 200000.0,
-                                 10000.0, 500.0, key="loz_Lh_kal")
-        st.markdown("")
-        sprawdz = st.button("🔍 SPRAWDŹ ŁOŻYSKO", use_container_width=True, key="loz_btn")
-
-    st.markdown("---")
-
-    if not sprawdz:
-        st.markdown("""
-        <div style='text-align:center; margin-top:2rem; color:#2a3a5a;'>
-            <div style='font-size:3rem;'>🔵</div>
-            <p style='font-size:0.95rem;'>
-                Wypełnij parametry i kliknij <strong>SPRAWDŹ</strong><br>
-                <span style='font-size:0.82rem;'>Dane z katalogu SKF/NSK/FAG znajdziesz wpisując oznaczenie łożyska na stronie producenta</span>
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        return
-
-    payload = {
-        "typ": typ, "Fa_N": Fa_N, "Fr_N": Fr_N, "n": n_val,
-        "Lh_wymagane": Lh_val, "C_kat": C_kat, "C0_kat": C0_kat,
-        "X": X_val if not is_oporowe else 1.0,
-        "Y": Y_val, "d_wew": d_wew,
-    }
-
-    with st.spinner("Weryfikacja łożyska..."):
-        wynik = call_api("lozysko_kalkulator", payload)
-
-    if "_error" in wynik:
-        st.error(f"❌ {wynik['_error']}"); return
-
-    ok = wynik.get("ok", False)
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Obciążenie równoważne P", f"{wynik.get('P_N', 0):.0f} N")
-    c2.metric("Wymagana nośność C_obl",  f"{wynik.get('C_wym_kN', 0):.2f} kN",
-              delta=f"katalog: {C_kat:.2f} kN",
-              delta_color="normal" if ok else "inverse")
-    c3.metric("Żywotność L10h", f"{wynik.get('Lh_osiagalne', 0):.0f} h",
-              delta=f"wym: {Lh_val:.0f} h",
-              delta_color="normal" if wynik.get('Lh_osiagalne', 0) >= Lh_val else "inverse")
-    c4.metric("Wsp. bezp. statyczny s₀", f"{wynik.get('s0', 0):.2f}",
-              delta="min: 1.0",
-              delta_color="normal" if wynik.get('s0', 0) >= 1.0 else "inverse")
-
-    if ok:
-        st.success("✅ Łożysko spełnia wszystkie warunki.")
-    else:
-        st.error("❌ Łożysko NIE spełnia warunków — dobierz inne z katalogu.")
-
-    with st.expander("📋 Szczegółowe kroki obliczeniowe", expanded=True):
-        render_logs(wynik.get("logs", []))
-    render_alerts(wynik.get("errors", []), wynik.get("warnings", []))
-
-
 # ==============================================================================
 # KONFIGURACJA WAŁÓW
 # ==============================================================================
@@ -886,6 +767,16 @@ def tab_obliczenia(inp: dict):
         st.info("Upewnij się, że API jest uruchomione i poprawnie skonfigurowane w secrets.toml")
         return
 
+    # Zapisz do session_state dla zakładki Dokumentacja
+    wyniki_bez_wykresow = {}
+    for k, v in wyniki.items():
+        if isinstance(v, dict):
+            wyniki_bez_wykresow[k] = {kk: vv for kk, vv in v.items() if kk != "wykres_b64"}
+        else:
+            wyniki_bez_wykresow[k] = v
+    st.session_state["ostatnie_wyniki"] = wyniki_bez_wykresow
+    st.session_state["ostatnie_inp"] = inp
+
     if run_sruba:  section_sruba(wyniki)
     if run_przek:  section_przekladnia(wyniki)
     if run_waly:
@@ -907,19 +798,114 @@ def tab_obliczenia(inp: dict):
 # MAIN
 # ==============================================================================
 
+def tab_dokumentacja():
+    st.markdown("""
+    <div style='margin-bottom:1rem;'>
+        <h1>📄 Dokumentacja</h1>
+        <p style='color:#4a5a7a; font-size:0.88rem; margin-top:-0.5rem;'>
+            Generowanie dokumentacji technicznej w formacie LaTeX
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if "ostatnie_wyniki" not in st.session_state:
+        st.info("⚠️ Najpierw uruchom obliczenia w zakładce **Obliczenia**, a następnie wróć tutaj.")
+        return
+
+    wyniki = st.session_state["ostatnie_wyniki"]
+    inp    = st.session_state["ostatnie_inp"]
+
+    st.success("✅ Wyniki obliczeń dostępne — gotowe do wygenerowania dokumentacji.")
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("#### Co zostanie wygenerowane:")
+        st.markdown("""
+        - Wstęp i założenia projektowe z Twoimi parametrami
+        - Obliczenia śruby (wyboczenie, naprężenia, nakrętka)
+        - Obliczenia przekładni pasowej
+        - Wyniki analizy wałów (tabele z wartościami)
+        - Opis konstrukcji i podsumowanie
+        - Bibliografia
+        """)
+    with col2:
+        generuj_btn = st.button("📄 GENERUJ LaTeX", use_container_width=True, key="gen_latex_btn")
+
+    st.markdown("---")
+
+    if not generuj_btn and "latex_code" not in st.session_state:
+        return
+
+    if generuj_btn:
+        with st.spinner("Generowanie dokumentacji..."):
+            result = call_api("dokumentacja", {"wyniki": wyniki, "inp": inp})
+        if "_error" in result:
+            st.error(f"❌ {result['_error']}")
+            return
+        st.session_state["latex_code"] = result.get("latex", "")
+
+    latex = st.session_state.get("latex_code", "")
+    if not latex:
+        st.error("Brak kodu LaTeX — spróbuj ponownie.")
+        return
+
+    st.success("✅ Dokumentacja wygenerowana pomyślnie!")
+
+    # Podgląd i pobieranie
+    tab_kod, tab_podglad = st.tabs(["Kod LaTeX", "Podgląd kodu"])
+
+    with tab_kod:
+        st.markdown("""
+        <div class="tip-box">
+        💡 <b>Jak skompilować?</b>
+        Skopiuj kod poniżej i wklej do <a href="https://www.overleaf.com" target="_blank">Overleaf</a>
+        lub skompiluj lokalnie: <code>pdflatex dokumentacja.tex</code>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.download_button(
+            label="⬇️ Pobierz plik .tex",
+            data=latex.encode("utf-8"),
+            file_name="dokumentacja_podnosnik.tex",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+        st.code(latex, language="latex")
+
+    with tab_podglad:
+        st.markdown("**Podgląd struktury dokumentu:**")
+        # Wyciągnij sekcje z LaTeX dla podglądu
+        import re
+        sections = re.findall(r"\\section\{([^}]+)\}", latex)
+        subsections = re.findall(r"\\subsection\{([^}]+)\}", latex)
+        st.markdown("**Sekcje główne:**")
+        for sec in sections:
+            st.markdown(f"- {sec}")
+        st.markdown("**Podsekcje:**")
+        for sub in subsections:
+            st.markdown(f"  - {sub}")
+        st.info("Pełny podgląd PDF dostępny po skompilowaniu w Overleaf lub LaTeX lokalnie.")
+
+
 def main():
     if not check_password():
         return
 
     inp = sidebar_inputs()
 
-    tab_obl, tab_loz, tab_instr = st.tabs(["Obliczenia", "Kalkulator Łożysk", "Instrukcja"])
+    tab_obl, tab_loz, tab_dok, tab_instr = st.tabs([
+        "Obliczenia", "Kalkulator Łożysk", "Dokumentacja", "Instrukcja"
+    ])
 
     with tab_obl:
         tab_obliczenia(inp)
 
     with tab_loz:
         tab_kalkulator_lozyska(inp)
+
+    with tab_dok:
+        tab_dokumentacja()
 
     with tab_instr:
         tab_instrukcja()
