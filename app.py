@@ -35,7 +35,7 @@ code, .stCode, [data-testid="stMetricValue"] { font-family: 'JetBrains Mono', mo
 }
 
 .stApp { background-color: #0d1117; }
-.main .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
+.main .block-container { padding-top: 4.5rem; padding-bottom: 2rem; }
 
 h1 { font-family: 'Syne', sans-serif !important; font-weight: 800 !important;
      color: #e8edf8 !important; letter-spacing: -0.02em; }
@@ -196,9 +196,14 @@ def render_alerts(errors: list, warnings: list):
 
 
 def render_wykres(b64_str: str, caption: str = ""):
-    if b64_str:
+    if not b64_str:
+        return
+    try:
+        import io
         img_bytes = base64.b64decode(b64_str)
-        st.image(img_bytes, caption=caption, use_container_width=True)
+        st.image(io.BytesIO(img_bytes), caption=caption, use_column_width=True)
+    except Exception as e:
+        st.error(f"Błąd renderowania wykresu: {e}")
 
 
 def param_row(name: str, default: str, desc: str) -> str:
@@ -507,7 +512,7 @@ def sidebar_inputs() -> dict:
     sila_F        = st.sidebar.number_input("Siła osiowa F [N]",          100.0, 500000.0, 10000.0, 500.0)
     ramie_sily    = st.sidebar.number_input("Ramię siły e [mm]",            0.0,   2000.0,   200.0,  10.0)
     dlugosc_sruby = st.sidebar.number_input("Długość robocza śruby [mm]",  50.0,  10000.0,  1000.0,  50.0)
-    n_sruby       = st.sidebar.number_input("Prędkość śruby n₂ [obr/min]", 1.0,   2000.0,   200.0,  10.0)
+    n_sruby       = st.sidebar.number_input("Prędkość śruby n₂ [obr/min]", 1.0,   2000.0,   177.5,  10.0)
     h_element     = st.sidebar.number_input("Wys. elementu mocującego h [mm]", 10.0, 500.0,  130.0,   5.0)
     st.sidebar.caption("h ≈ wys. nakrętki — wpisz 130 wstępnie, po obliczeniach popraw na Hn+10 mm")
     alfa = st.sidebar.selectbox(
@@ -633,7 +638,7 @@ def section_wal(wyniki: dict, klucz: str, tytul: str):
     col4.metric("Limit ugięcia", f"{w.get('lim_ug',0):.4f} mm")
 
     if w.get("wykres_b64"):
-        render_wykres(w["wykres_b64"], tytul)
+        render_wykres(w.get("wykres_b64", ""), tytul)
 
     with st.expander("📋 Szczegółowe kroki obliczeniowe"):
         render_logs(w.get("logs", []))
@@ -683,19 +688,19 @@ def get_wal_config(numer: int, seg_default, loc_defaults) -> dict:
             "Offset = odległość od początku tego segmentu [mm]"
         )
         la1, la2, lb1, lb2, lf1, lf2 = st.columns(6)
-        sA = int(la1.number_input("Łoż.A — seg",    1, 10, loc_defaults[0][0], key=f"w{numer}_sA"))
-        oA =     la2.number_input("Łoż.A — offset", 0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
-        sB = int(lb1.number_input("Łoż.B — seg",    1, 10, loc_defaults[1][0], key=f"w{numer}_sB"))
-        oB =     lb2.number_input("Łoż.B — offset", 0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
-        sF = int(lf1.number_input("Koło — seg",     1, 10, loc_defaults[2][0], key=f"w{numer}_sF"))
-        oF =     lf2.number_input("Koło — offset",  0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
+        sA = int(la1.number_input("Łoż.A — seg",     0, 9, loc_defaults[0][0], key=f"w{numer}_sA"))
+        oA =     la2.number_input("Łoż.A — offset",  0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
+        sB = int(lb1.number_input("Łoż.B — seg",     0, 9, loc_defaults[1][0], key=f"w{numer}_sB"))
+        oB =     lb2.number_input("Łoż.B — offset",  0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
+        sF = int(lf1.number_input("Koło — seg",      0, 9, loc_defaults[2][0], key=f"w{numer}_sF"))
+        oF =     lf2.number_input("Koło — offset",   0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
 
     return {
         "nazwa": f"Wał {numer}: {'Silnik (Napędowy)' if numer == 1 else 'Śruba (Napędzany)'}",
         "segmenty": segmenty,
-        "loc_support_A": {"seg_idx": sA - 1, "offset": oA},
-        "loc_support_B": {"seg_idx": sB - 1, "offset": oB},
-        "loc_load":      {"seg_idx": sF - 1, "offset": oF},
+        "loc_support_A": {"seg_idx": sA, "offset": oA},
+        "loc_support_B": {"seg_idx": sB, "offset": oB},
+        "loc_load":      {"seg_idx": sF, "offset": oF},
     }
 
 
@@ -728,12 +733,12 @@ def tab_obliczenia(inp: dict):
         wal1_cfg = get_wal_config(
             numer=1,
             seg_default=[(30, 28), (120, 20)],
-            loc_defaults=[(2, 11.0), (2, 109.0), (2, 60.0)],
+            loc_defaults=[(1, 11.0), (1, 109.0), (1, 60.0)],
         )
         wal2_cfg = get_wal_config(
             numer=2,
             seg_default=[(51, 20), (49.108, 22), (99.785, 24), (20.108, 22)],
-            loc_defaults=[(2, 42.108), (4, 7.0), (3, 49.892)],
+            loc_defaults=[(1, 42.108), (3, 7.0), (2, 49.892)],
         )
         st.markdown("---")
 
