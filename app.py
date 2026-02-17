@@ -512,7 +512,7 @@ def sidebar_inputs() -> dict:
     sila_F        = st.sidebar.number_input("Siła osiowa F [N]",          100.0, 500000.0, 10000.0, 500.0)
     ramie_sily    = st.sidebar.number_input("Ramię siły e [mm]",            0.0,   2000.0,   200.0,  10.0)
     dlugosc_sruby = st.sidebar.number_input("Długość robocza śruby [mm]",  50.0,  10000.0,  1000.0,  50.0)
-    n_sruby       = st.sidebar.number_input("Prędkość śruby n₂ [obr/min]", 1.0,   2000.0,   200.0,  10.0)
+    n_sruby       = st.sidebar.number_input("Prędkość śruby n₂ [obr/min]", 1.0,   2000.0,   177.5,  22.5)
     h_element     = st.sidebar.number_input("Wys. elementu mocującego h [mm]", 10.0, 500.0,  130.0,   5.0)
     st.sidebar.caption("h ≈ wys. nakrętki — wpisz 130 wstępnie, po obliczeniach popraw na Hn+10 mm")
     alfa = st.sidebar.selectbox(
