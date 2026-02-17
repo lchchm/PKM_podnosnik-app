@@ -34,7 +34,7 @@ code, .stCode, [data-testid="stMetricValue"] { font-family: 'JetBrains Mono', mo
 }
 
 .stApp { background-color: #0d1117; }
-.main .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
+.main .block-container { padding-top: 4.5rem; padding-bottom: 2rem; }
 
 h1 { font-family: 'Syne', sans-serif !important; font-weight: 800 !important;
      color: #e8edf8 !important; letter-spacing: -0.02em; }
