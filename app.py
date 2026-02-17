@@ -560,13 +560,6 @@ def sidebar_inputs() -> dict:
     podzialka = st.sidebar.selectbox("Podziałka pasa [mm]", [3, 5, 8, 14], index=1)
     szer_pas  = st.sidebar.number_input("Szerokość pasa b [mm]", 5.0, 100.0, 15.0, 5.0)
 
-    st.sidebar.markdown("### 4 · Łożysko wzdłużne")
-    loz_Lh  = st.sidebar.number_input("Żywotność L10h [h]", 500.0, 100000.0, 10000.0, 500.0)
-    loz_kat = st.sidebar.selectbox("Kąt działania α [°]", [15, 25, 30, 40, 45], index=2)
-    Y_map   = {15: 1.0, 25: 0.78, 30: 0.66, 40: 0.55, 45: 0.50}
-    loz_Y   = Y_map[loz_kat]
-    st.sidebar.caption(f"Współczynnik Y = {loz_Y} (z katalogu SKF)")
-
     return {
         "sila_F": sila_F, "ramie_sily": ramie_sily,
         "dlugosc_sruby": dlugosc_sruby, "n_sruby": n_sruby,
@@ -577,7 +570,6 @@ def sidebar_inputs() -> dict:
         "n1": n1, "z1": int(z1), "z2": int(z2),
         "podzialka": float(podzialka), "szerokosc": szer_pas,
         "hz": 2.1, "T_rob": 650.0, "m_metr": 0.360,
-        "loz_Lh": loz_Lh, "loz_Y": loz_Y,
     }
 
 
@@ -645,19 +637,123 @@ def section_wal(wyniki: dict, klucz: str, tytul: str):
     render_alerts(w.get("errors", []), w.get("warnings", []))
 
 
-def section_lozysko(wyniki: dict):
-    st.markdown("## 🔵 Łożyskowanie")
-    w = wyniki.get("lozysko", {})
-    if "_error" in w:
-        st.error(w["_error"]); return
+def tab_kalkulator_lozyska(inp: dict):
+    st.markdown("""
+    <div style='margin-bottom:1rem;'>
+        <h1>🔵 Kalkulator Łożysk</h1>
+        <p style='color:#4a5a7a; font-size:0.88rem; margin-top:-0.5rem;'>
+            Weryfikacja wybranego łożyska wg ISO 281
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    col1.metric("Wymagana nośność C", f"{w.get('C_kN', 0):.2f} kN")
-    col2.metric("Żywotność L10h", f"{w.get('loz_Lh', 0):.0f} h")
+    st.markdown("""
+    <div class="tip-box">
+    💡 <b>Jak korzystać?</b> Wybierz typ łożyska, wpisz parametry z noty katalogowej
+    (SKF, NSK, FAG) i kliknij <b>SPRAWDŹ</b>. Program powie czy łożysko wytrzyma
+    i jaka będzie jego rzeczywista żywotność. Powtarzaj aż wyniki będą zielone.
+    </div>
+    """, unsafe_allow_html=True)
 
-    with st.expander("📋 Szczegółowe kroki obliczeniowe"):
-        render_logs(w.get("logs", []))
-    render_alerts(w.get("errors", []), w.get("warnings", []))
+    TYPY = {
+        "kulkowe_skosne_dwurzedowe": "Kulkowe skośne dwurzędowe (3206, 3306)",
+        "kulkowe_jednorzedowe":      "Kulkowe jednorzędowe (6206, 6306)",
+        "kulkowe_oporowe":           "Kulkowe oporowe (51206)",
+        "walcowe_oporowe":           "Wałeczkowe oporowe (81206, 89306)",
+        "stozkowe":                  "Stożkowe (32206, 32306)",
+        "barylkowe_oporowe":         "Baryłkowe oporowe (29406)",
+    }
+
+    col_l, col_r = st.columns([1, 1])
+
+    with col_l:
+        st.markdown("### Parametry łożyska")
+        typ = st.selectbox("Typ łożyska", options=list(TYPY.keys()),
+                           format_func=lambda k: TYPY[k], key="loz_typ")
+        d_wew = st.number_input("Średnica wewnętrzna d [mm]", 5.0, 500.0, 30.0, 1.0,
+                                key="loz_d",
+                                help="Średnica otworu łożyska = średnica czopa wału")
+        st.markdown("**Dane z noty katalogowej**")
+        c1, c2 = st.columns(2)
+        C_kat  = c1.number_input("Nośność dynamiczna C [kN]",  0.1, 2000.0, 30.0, 0.5, key="loz_C")
+        C0_kat = c2.number_input("Nośność statyczna C₀ [kN]", 0.1, 2000.0, 20.0, 0.5, key="loz_C0")
+
+        st.markdown("**Współczynniki obciążenia** (z katalogu)")
+        st.caption("Kulkowe skośne dwurzędowe: typowo X=0.67, Y≈0.67 (α=30°)")
+        is_oporowe = typ in ("kulkowe_oporowe", "walcowe_oporowe", "barylkowe_oporowe")
+        X_default  = 1.0 if is_oporowe else 0.67
+        Y_default  = 1.0 if is_oporowe else 0.67
+        cx1, cx2 = st.columns(2)
+        X_val = cx1.number_input("Współczynnik X", 0.0, 2.0, X_default, 0.01,
+                                  key="loz_X", disabled=is_oporowe)
+        Y_val = cx2.number_input("Współczynnik Y", 0.0, 5.0, Y_default, 0.01, key="loz_Y_kal")
+        if is_oporowe:
+            st.caption("ℹ️ Łożyska oporowe przenoszą wyłącznie siłę osiową.")
+
+    with col_r:
+        st.markdown("### Obciążenia i wymagania")
+        st.caption("Siły pobrane automatycznie z założeń — możesz nadpisać")
+        Fa_N = st.number_input("Siła osiowa Fa [N]", 0.0, 500000.0,
+                               float(inp.get("sila_F", 10000.0)), 100.0, key="loz_Fa",
+                               help="= siła podnoszona przez śrubę")
+        Fr_N = st.number_input("Siła promieniowa Fr [N]", 0.0, 100000.0, 0.0, 10.0,
+                               key="loz_Fr",
+                               help="= siła obwodowa od pasa (Fo2 z wyników przekładni)")
+        n_val  = st.number_input("Prędkość obrotowa n [obr/min]", 1.0, 10000.0,
+                                 float(inp.get("n_sruby", 177.5)), 10.0, key="loz_n")
+        Lh_val = st.number_input("Wymagana żywotność Lh [h]", 100.0, 200000.0,
+                                 10000.0, 500.0, key="loz_Lh_kal")
+        st.markdown("")
+        sprawdz = st.button("🔍 SPRAWDŹ ŁOŻYSKO", use_container_width=True, key="loz_btn")
+
+    st.markdown("---")
+
+    if not sprawdz:
+        st.markdown("""
+        <div style='text-align:center; margin-top:2rem; color:#2a3a5a;'>
+            <div style='font-size:3rem;'>🔵</div>
+            <p style='font-size:0.95rem;'>
+                Wypełnij parametry i kliknij <strong>SPRAWDŹ</strong><br>
+                <span style='font-size:0.82rem;'>Dane z katalogu SKF/NSK/FAG znajdziesz wpisując oznaczenie łożyska na stronie producenta</span>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+
+    payload = {
+        "typ": typ, "Fa_N": Fa_N, "Fr_N": Fr_N, "n": n_val,
+        "Lh_wymagane": Lh_val, "C_kat": C_kat, "C0_kat": C0_kat,
+        "X": X_val if not is_oporowe else 1.0,
+        "Y": Y_val, "d_wew": d_wew,
+    }
+
+    with st.spinner("Weryfikacja łożyska..."):
+        wynik = call_api("lozysko_kalkulator", payload)
+
+    if "_error" in wynik:
+        st.error(f"❌ {wynik['_error']}"); return
+
+    ok = wynik.get("ok", False)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Obciążenie równoważne P", f"{wynik.get('P_N', 0):.0f} N")
+    c2.metric("Wymagana nośność C_obl",  f"{wynik.get('C_wym_kN', 0):.2f} kN",
+              delta=f"katalog: {C_kat:.2f} kN",
+              delta_color="normal" if ok else "inverse")
+    c3.metric("Żywotność L10h", f"{wynik.get('Lh_osiagalne', 0):.0f} h",
+              delta=f"wym: {Lh_val:.0f} h",
+              delta_color="normal" if wynik.get('Lh_osiagalne', 0) >= Lh_val else "inverse")
+    c4.metric("Wsp. bezp. statyczny s₀", f"{wynik.get('s0', 0):.2f}",
+              delta="min: 1.0",
+              delta_color="normal" if wynik.get('s0', 0) >= 1.0 else "inverse")
+
+    if ok:
+        st.success("✅ Łożysko spełnia wszystkie warunki.")
+    else:
+        st.error("❌ Łożysko NIE spełnia warunków — dobierz inne z katalogu.")
+
+    with st.expander("📋 Szczegółowe kroki obliczeniowe", expanded=True):
+        render_logs(wynik.get("logs", []))
+    render_alerts(wynik.get("errors", []), wynik.get("warnings", []))
 
 
 # ==============================================================================
@@ -688,19 +784,19 @@ def get_wal_config(numer: int, seg_default, loc_defaults) -> dict:
             "Offset = odległość od początku tego segmentu [mm]"
         )
         la1, la2, lb1, lb2, lf1, lf2 = st.columns(6)
-        sA = int(la1.number_input("Łoż.A — seg",     0, 9, loc_defaults[0][0], key=f"w{numer}_sA"))
-        oA =     la2.number_input("Łoż.A — offset",  0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
-        sB = int(lb1.number_input("Łoż.B — seg",     0, 9, loc_defaults[1][0], key=f"w{numer}_sB"))
-        oB =     lb2.number_input("Łoż.B — offset",  0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
-        sF = int(lf1.number_input("Koło — seg",      0, 9, loc_defaults[2][0], key=f"w{numer}_sF"))
-        oF =     lf2.number_input("Koło — offset",   0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
+        sA = int(la1.number_input("Łoż.A — seg",    1, 10, loc_defaults[0][0], key=f"w{numer}_sA"))
+        oA =     la2.number_input("Łoż.A — offset", 0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
+        sB = int(lb1.number_input("Łoż.B — seg",    1, 10, loc_defaults[1][0], key=f"w{numer}_sB"))
+        oB =     lb2.number_input("Łoż.B — offset", 0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
+        sF = int(lf1.number_input("Koło — seg",     1, 10, loc_defaults[2][0], key=f"w{numer}_sF"))
+        oF =     lf2.number_input("Koło — offset",  0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
 
     return {
         "nazwa": f"Wał {numer}: {'Silnik (Napędowy)' if numer == 1 else 'Śruba (Napędzany)'}",
         "segmenty": segmenty,
-        "loc_support_A": {"seg_idx": sA, "offset": oA},
-        "loc_support_B": {"seg_idx": sB, "offset": oB},
-        "loc_load":      {"seg_idx": sF, "offset": oF},
+        "loc_support_A": {"seg_idx": sA - 1, "offset": oA},
+        "loc_support_B": {"seg_idx": sB - 1, "offset": oB},
+        "loc_load":      {"seg_idx": sF - 1, "offset": oF},
     }
 
 
@@ -719,11 +815,10 @@ def tab_obliczenia(inp: dict):
     """, unsafe_allow_html=True)
 
     st.markdown("### Wybierz zakres obliczeń")
-    col_cb = st.columns(5)
+    col_cb = st.columns(3)
     run_sruba = col_cb[0].checkbox("Śruba + nakrętka",  True)
     run_przek = col_cb[1].checkbox("Przekładnia pasowa", True)
     run_waly  = col_cb[2].checkbox("Wały napędowe",     True)
-    run_loz   = col_cb[3].checkbox("Łożysko",           True)
 
     st.markdown("---")
 
@@ -733,12 +828,12 @@ def tab_obliczenia(inp: dict):
         wal1_cfg = get_wal_config(
             numer=1,
             seg_default=[(30, 28), (120, 20)],
-            loc_defaults=[(1, 11.0), (1, 109.0), (1, 60.0)],
+            loc_defaults=[(2, 11.0), (2, 109.0), (2, 60.0)],
         )
         wal2_cfg = get_wal_config(
             numer=2,
             seg_default=[(51, 20), (49.108, 22), (99.785, 24), (20.108, 22)],
-            loc_defaults=[(1, 42.108), (3, 7.0), (2, 49.892)],
+            loc_defaults=[(2, 42.108), (4, 7.0), (3, 49.892)],
         )
         st.markdown("---")
 
@@ -784,13 +879,6 @@ def tab_obliczenia(inp: dict):
             payload["wal1"] = {**wal1_cfg, "material": material}
         if run_waly and wal2_cfg:
             payload["wal2"] = {**wal2_cfg, "material": material}
-        if run_loz:
-            payload["lozysko"] = {
-                "Fw_kN": inp["sila_F"] / 1000,
-                "Lh": inp["loz_Lh"],
-                "Y": inp["loz_Y"],
-                "n_sruby": inp["n_sruby"],
-            }
         wyniki = call_api("pelny", payload)
 
     if "_error" in wyniki:
@@ -803,11 +891,10 @@ def tab_obliczenia(inp: dict):
     if run_waly:
         section_wal(wyniki, "wal1", "Wał 1: Silnik (Napędowy)")
         section_wal(wyniki, "wal2", "Wał 2: Śruba (Napędzany)")
-    if run_loz:    section_lozysko(wyniki)
 
     all_ok = all(
         wyniki.get(k, {}).get("ok", True)
-        for k in ["sruba", "przekladnia", "wal1", "wal2", "lozysko"]
+        for k in ["sruba", "przekladnia", "wal1", "wal2"]
         if k in wyniki
     )
     if all_ok:
@@ -826,10 +913,13 @@ def main():
 
     inp = sidebar_inputs()
 
-    tab_obl, tab_instr = st.tabs(["🔢 Obliczenia", "📖 Instrukcja"])
+    tab_obl, tab_loz, tab_instr = st.tabs(["Obliczenia", "Kalkulator Łożysk", "Instrukcja"])
 
     with tab_obl:
         tab_obliczenia(inp)
+
+    with tab_loz:
+        tab_kalkulator_lozyska(inp)
 
     with tab_instr:
         tab_instrukcja()
