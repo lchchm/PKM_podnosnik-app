@@ -828,7 +828,7 @@ def tab_kalkulator_lozyska(inp: dict):
         # Domyślne wartości pobieramy z bocznego panelu (inp), ale pozwalamy edytować
         Fa_N = st.number_input("Siła osiowa Fa [N]", 0.0, 500000.0, float(inp.get("sila_F", 10000.0)))
         Fr_N = st.number_input("Siła promieniowa Fr [N]", 0.0, 500000.0, 0.0)
-        n_ obr = st.number_input("Prędkość n [obr/min]", 0.0, 10000.0, float(inp.get("n_sruby", 177.5)))
+        n_obr = st.number_input("Prędkość n [obr/min]", 0.0, 10000.0, float(inp.get("n_sruby", 177.5)))
         Lh_wym = st.number_input("Wymagana trwałość Lh [h]", 100.0, 100000.0, 10000.0)
 
     with col2:
