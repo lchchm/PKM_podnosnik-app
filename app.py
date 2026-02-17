@@ -217,276 +217,142 @@ def param_row(name: str, default: str, desc: str) -> str:
 
 
 # ==============================================================================
-# ZAKŁADKA: INSTRUKCJA
+# ZAKŁADKA: INSTRUKCJA (ZAKTUALIZOWANA)
 # ==============================================================================
 
 def tab_instrukcja():
-    st.markdown("## 📖 Instrukcja obsługi")
-    st.markdown(
-        "Poniżej opisano każdy parametr: co oznacza, skąd pochodzi wartość domyślna "
-        "i co należy wpisać dla własnego projektu."
+    st.markdown("## 📖 Instrukcja Obsługi Projektu")
+    
+    st.info(
+        "👋 Cześć! Ta aplikacja to Twój **weryfikator**. Ona nie wymyśli projektu za Ciebie, "
+        "ale sprawdzi, czy to, co zaprojektowałeś (dobrałeś), nie rozpadnie się pod obciążeniem. "
+        "Poniżej znajdziesz wyjaśnienie, skąd brać dane i jak czytać wyniki."
     )
 
-    # ── 1. PARAMETRY EKSPLOATACYJNE ─────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 1 · Parametry eksploatacyjne")
+    # ── 1. DANE WEJŚCIOWE ───────────────────────────────────────────────────
+    st.markdown("### 1️⃣ Panel Boczny: Co tu wpisać?")
     st.markdown(
-        "Dane z treści zadania projektowego. Każdy student dostaje inne wartości "
-        "od prowadzącego — to jedyne parametry które **na pewno** musisz zmienić."
+        "Panel boczny to Twoje „Założenia Projektowe”. Dzielą się na te, które **musisz** wziąć z zadania, "
+        "i te, które **dobierasz** sam."
     )
 
+    # Parametry Eksploatacyjne
     rows_eksp = "".join([
-        param_row("Siła osiowa F [N]", "10 000 N",
-                  "Udźwig podnośnika — siła którą śruba musi podnieść. "
-                  "<b>Znajdziesz ją w treści zadania.</b> Wpisz w niutonach "
-                  "(np. 10 kN = 10 000 N)."),
-        param_row("Ramię siły e [mm]", "200 mm",
-                  "Odległość między osią śruby a miejscem przyłożenia momentu na kluczu. "
-                  "Zazwyczaj zadana przez prowadzącego lub dobrana przez studenta "
-                  "na podstawie ergonomii (typowo 150–300 mm)."),
-        param_row("Długość robocza śruby [mm]", "1 000 mm",
-                  "Skok roboczy podnośnika — o ile milimetrów śruba musi się wysunąć. "
-                  "<b>Znajdziesz ją w treści zadania.</b>"),
-        param_row("Prędkość śruby n₂ [obr/min]", "200 obr/min",
-                  "Wymagana prędkość obrotowa śruby — wynika z zadanej prędkości "
-                  "podnoszenia lub jest zadana wprost. "
-                  "Zależy od doboru silnika i przełożenia."),
-        param_row("Wys. elementu mocującego h [mm]", "130 mm",
-                  "Szacunkowa wysokość nakrętki lub obudowy, która wydłuża obliczeniową "
-                  "długość wyboczeniową śruby. Jeśli śruba ma 1000 mm, a h = 130 mm, "
-                  "program liczy wyboczenie dla L = 1130 mm. "
-                  "Przyjmuje się wstępnie ok. 10–15% długości śruby "
-                  "i weryfikuje po obliczeniu nakrętki — jeśli wyszło Hn = 55 mm, "
-                  "możesz poprawić h na ok. 60–70 mm i przeliczyć ponownie."),
-        param_row("Współczynnik wyboczenia µ", "1.0 (obustronny przegub)",
-                  "Sposób podparcia śruby na końcach. "
-                  "Dla typowego podnośnika śruba jest podparta przegubowo z obu stron → µ = 1.0. "
-                  "µ = 0.5 jeśli oba końce są utwierdzone (rzadkie). "
-                  "µ = 2.0 jeśli śruba jest wspornikowa (jeden koniec wolny)."),
+        param_row("Siła osiowa F [N]", "ZADANIE",
+                  "Ciężar, który podnośnik ma unieść. <b>To wartość święta – bierzesz ją z kartki od prowadzącego.</b> "
+                  "Pamiętaj: 1 kN = 1000 N."),
+        param_row("Ramię siły e [mm]", "ZADANIE / KONSTRUKCJA",
+                  "Odległość osi śruby od środka ciężkości ładunku. Jeśli nie podano w zadaniu, "
+                  "przyjmij bezpiecznie 150–250 mm."),
+        param_row("Długość śruby [mm]", "ZADANIE",
+                  "Wysokość podnoszenia (skok roboczy). Bierzesz z treści zadania."),
+        param_row("Prędkość n₂ [obr/min]", "DOBÓR",
+                  "Jak szybko ma się kręcić śruba. Wynika z prędkości podnoszenia (v). "
+                  "Na początku strzelasz (np. 150 obr/min), a potem korygujesz, gdy dobierzesz gwint (skok P)."),
+        param_row("Wsp. wyboczenia µ", "1.0",
+                  "Sposób mocowania śruby. <br>• <b>1.0</b> = Przegub-Przegub (standardowy podnośnik).<br>"
+                  "• <b>2.0</b> = Wspornik (jeden koniec wolny) – ⚠️ unikać, śruba wyjdzie gruba!"),
     ])
-    st.markdown(f'<div class="instr-card"><h4>Parametry zadania</h4>{rows_eksp}</div>',
+    st.markdown(f'<div class="instr-card"><h4>A. Parametry Pracy (Zadanie)</h4>{rows_eksp}</div>', 
                 unsafe_allow_html=True)
 
-    # ── 2. MATERIAŁY ────────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 2 · Materiały")
-    st.markdown(
-        "Wybierz gotowy zestaw materiałowy lub wpisz własne wartości. "
-        "Wartości Re i E to standardowe dane tablicowe — znajdziesz je "
-        "w podręczniku PKM lub normach materiałowych."
-    )
-
+    # Materiały
     rows_mat = "".join([
-        param_row("Stal C45 / Brąz CuSn", "Re=355, E=210 GPa / Re=210, E=130 GPa",
-                  "Najczęściej stosowana para dla podnośników — dobra wytrzymałość śruby "
-                  "i dobry materiał nakrętki (brąz zmniejsza tarcie i zużycie). "
-                  "To domyślny zestaw w projekcie wzorcowym."),
-        param_row("Stal 42CrMo4 / Brąz CuSn", "Re=650 MPa",
-                  "Stal stopowa o wyższej wytrzymałości. Wybierz jeśli C45 nie przechodzi "
-                  "warunków wytrzymałościowych (program pokaże czerwony wskaźnik nz)."),
-        param_row("Stal C35 / Poliamid", "Re=305 MPa, pdop=5 MPa",
-                  "Lekkie rozwiązanie z tworzywem sztucznym zamiast brązu. "
-                  "Niższy nacisk dopuszczalny — nakrętka wychodzi większa."),
-        param_row("Współczynnik tarcia µ", "0.13",
-                  "Tarcie w gwincie dla pary stal-brąz ze smarowaniem. "
-                  "Wartość tablicowa z PKM. Nie zmieniaj jeśli używasz gotowego zestawu."),
-        param_row("Nacisk dopuszczalny pdop [MPa]", "14 MPa",
-                  "Dopuszczalny nacisk na powierzchnię gwintu dla pary stal-brąz "
-                  "przy małych prędkościach (v < 0.05 m/s). Wartość tablicowa z PKM."),
+        param_row("Stal C45 / Brąz", "STANDARD",
+                  "Najlepszy wybór na start. Stal C45 jest tania i mocna, Brąz na nakrętkę zapewnia poślizg."),
+        param_row("Stal 42CrMo4", "OPCJA",
+                  "Wybierz tę stal, jeśli przy C45 śruba nie spełnia warunków bezpieczeństwa (wskaźnik nz na czerwono)."),
+        param_row("Nacisk pdop [MPa]", "12–15 MPa",
+                  "Dopuszczalny nacisk dla brązu. Decyduje o wysokości nakrętki. "
+                  "Jeśli nakrętka wychodzi gigantyczna – zmień materiał na taki z wyższym pdop."),
     ])
-    st.markdown(f'<div class="instr-card"><h4>Zestawy materiałowe</h4>{rows_mat}</div>',
+    st.markdown(f'<div class="instr-card"><h4>B. Materiały (Dobór)</h4>{rows_mat}</div>', 
                 unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="tip-box">💡 <b>Skąd wziąć Re i E dla własnego materiału?</b> '
-        'Poszukaj w tablicach PKM, normie PN-EN 10083 (stale) lub katalogu producenta. '
-        'Re to granica plastyczności [MPa], E to moduł Younga [GPa].</div>',
-        unsafe_allow_html=True
-    )
-
-    # ── 3. PRZEKŁADNIA ──────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 3 · Przekładnia pasowa zębata")
-    st.markdown(
-        "Przekładnia przenosi napęd z silnika elektrycznego na śrubę. "
-        "Przełożenie i = z₂/z₁ = n₁/n₂ — dobieram tak, żeby silnik "
-        "kręcił się z prędkością katalogową, a śruba z wymaganą n₂."
-    )
-
-    rows_przek = "".join([
-        param_row("Prędkość silnika n₁ [obr/min]", "710 obr/min",
-                  "Prędkość znamionowa silnika elektrycznego. "
-                  "Typowe wartości dla silników 50 Hz: 3000 (2-bieg.), 1500 (4-bieg.), "
-                  "1000 (6-bieg.), 710 (8-bieg.), 600 (10-bieg.). "
-                  "<b>Wybierz silnik tak, żeby i = n₁/n₂ wyszło rozsądne (2–8).</b>"),
-        param_row("Zęby koła napędowego z₁", "34",
-                  "Liczba zębów na kole zamocowanym na wale silnika (mniejsze koło). "
-                  "Dobierana przez studenta — typowo 20–50 zębów. "
-                  "Przełożenie i = z₂/z₁ musi być równe n₁/n₂."),
-        param_row("Zęby koła napędzanego z₂", "136",
-                  "Liczba zębów na kole zamocowanym na wale śruby (większe koło). "
-                  "Tu: 136/34 = 4.0 = 710/177.5 ✔. "
-                  "<b>Sprawdź czy z₂/z₁ ≈ n₁/n₂ — program poinformuje o błędzie jeśli odchylenie > 5%.</b>"),
-        param_row("Podziałka pasa [mm]", "5 mm (HTD 5M)",
-                  "Odstęp między zębami pasa. Dostępne pasy zębate: 3M, 5M, 8M, 14M. "
-                  "Pas 5M to standardowy wybór dla małych/średnich mocy. "
-                  "Większa podziałka = większa przenoszona moc, ale też większe koła."),
-        param_row("Szerokość pasa b [mm]", "15 mm",
-                  "Szerokość pasa zębatego. Typowe dla 5M: 9, 15, 25 mm. "
-                  "Jeśli program wyświetla błąd 'pas niewystarczający' — zwiększ szerokość."),
+    # Przekładnia
+    rows_drive = "".join([
+        param_row("Silnik n₁", "710 / 960 / 1440",
+                  "Obroty silnika elektrycznego. Wybierz z szeregu normatywnego. "
+                  "Zalecane wolniejsze (710 lub 960), żeby przełożenie nie wyszło kosmiczne."),
+        param_row("Zęby z₁ / z₂", "DOBÓR",
+                  "Liczba zębów kół pasowych. <br>• z₁ (małe) na silniku.<br>• z₂ (duże) na śrubie.<br>"
+                  "<b>Cel:</b> Stosunek z₂/z₁ ma być taki sam jak n₁/n₂ (z dokładnością do 5%)."),
     ])
-    st.markdown(f'<div class="instr-card"><h4>Dobór przełożenia</h4>{rows_przek}</div>',
+    st.markdown(f'<div class="instr-card"><h4>C. Napęd (Dobór)</h4>{rows_drive}</div>', 
                 unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="tip-box">💡 <b>Jak dobrać z₁ i z₂?</b> '
-        'Oblicz wymagane przełożenie: i = n₁/n₂. Np. n₁=710, n₂=200 → i=3.55. '
-        'Wybierz z₁ tak żeby z₂ = z₁ × i wyszło całkowite — np. z₁=34 → z₂=120.7 (nie OK), '
-        'z₁=36 → z₂=127.8 (nie OK), z₁=40 → z₂=142 (OK). '
-        'Małe odchylenia (do 5%) są akceptowalne.</div>',
-        unsafe_allow_html=True
-    )
-
-    # ── 4. ŁOŻYSKO ──────────────────────────────────────────────────────────
+    # ── 2. KONFIGURACJA WAŁÓW ───────────────────────────────────────────────
     st.markdown("---")
-    st.markdown("### 4 · Łożysko wzdłużne")
+    st.markdown("### 2️⃣ Konfiguracja Wałów (Najtrudniejsze!)")
+    
     st.markdown(
-        "Program oblicza wymaganą nośność dynamiczną C [kN] — na tej podstawie "
-        "dobierasz łożysko z katalogu SKF lub podobnego."
+        """
+        <div class="warn-box">
+        ⚠️ <b>Nie projektuj wału w pamięci!</b><br>
+        1. Weź kartkę.<br>
+        2. Narysuj wał (stopnie, czopy pod łożyska, miejsce na koło pasowe).<br>
+        3. Wymiaruj go (długości i średnice).<br>
+        4. Dopiero wtedy wpisz dane do programu.
+        </div>
+        """, unsafe_allow_html=True
     )
 
-    rows_loz = "".join([
-        param_row("Żywotność L10h [h]", "10 000 h",
-                  "Wymagana trwałość łożyska w godzinach pracy. "
-                  "10 000 h to typowa wartość dla maszyn przemysłowych (ok. 5 lat × 2000 h/rok). "
-                  "Dla urządzeń sporadycznie używanych można przyjąć 5 000 h."),
-        param_row("Kąt działania α [°]", "30°",
-                  "Kąt ustawienia rolek/kulek w łożysku skośnym. "
-                  "Odpowiada współczynnikowi Y z katalogu. "
-                  "Dla łożysk oporowych: α=90° (Y=0.5). "
-                  "Dla łożysk skośnych kulkowych: α=15°, 25°, 30°, 40°. "
-                  "<b>Sprawdź w katalogu SKF dla wybranego łożyska.</b>"),
-    ])
-    st.markdown(f'<div class="instr-card"><h4>Trwałość łożyska</h4>{rows_loz}</div>',
-                unsafe_allow_html=True)
-
-    # ── 5. WAŁY ─────────────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 5 · Analiza wałów")
-    st.markdown(
-        "To jedyna sekcja gdzie student wprowadza **własną geometrię** — "
-        "program sprawdza czy zaprojektowane wały wytrzymają obliczone obciążenia. "
-        "Domyślne wartości to projekt wzorcowy — zastąp je własnym projektem."
-    )
-
-    st.markdown(
-        '<div class="warn-box">⚠️ <b>Ważne:</b> Program nie projektuje wałów — on je sprawdza. '
-        'Najpierw narysuj wał (podcięcia pod łożyska, kliny, uszczelnienia), '
-        'wyznacz długości i średnice poszczególnych stopni, a dopiero potem wpisz je tutaj.</div>',
-        unsafe_allow_html=True
-    )
-
-    rows_wal = "".join([
-        param_row("Segmenty wału", "własny projekt",
-                  "Wpisz każdy stopień wału jako parę: długość [mm] × średnica [mm]. "
-                  "Kolejność od lewej do prawej zgodnie z rysunkiem złożeniowym. "
-                  "Minimalna liczba segmentów: 2 (czop + część robocza)."),
-        param_row("Lokalizacja podpór A i B", "własny projekt",
-                  "Gdzie siedzą łożyska — środek łożyska na osi wału. "
-                  "<b>Seg</b> = numer segmentu (1 = pierwszy od lewej). "
-                  "<b>Offset</b> = odległość środka łożyska od początku tego segmentu [mm]."),
-        param_row("Lokalizacja koła pasowego", "własny projekt",
-                  "Środek koła pasowego na wale — taki sam format jak podpory. "
-                  "To tu działa siła poprzeczna od pasa."),
-        param_row("Moment skręcający Ms", "automatycznie",
-                  "Program oblicza Ms z wyników sekcji Śruba i Przekładnia — "
-                  "nie musisz tego wpisywać."),
-        param_row("Siła poprzeczna Ft", "automatycznie",
-                  "Siła obwodowa od pasa (Fo1 / Fo2 z wyników przekładni). "
-                  "Mnożona wewnętrznie przez wsp. naciągu 2.5 — "
-                  "celowo zawyżony żeby projekt był po bezpiecznej stronie."),
-    ])
-    st.markdown(f'<div class="instr-card"><h4>Parametry wału</h4>{rows_wal}</div>',
-                unsafe_allow_html=True)
-
-    # Przykład z rysunkiem
-    st.markdown("#### Przykład — jak wpisać lokalizacje")
-    st.markdown(
-        '<div class="tip-box">'
-        '💡 <b>Jak czytać ten schemat:</b> każdy prostokąt to jeden segment wału. '
-        'Numeracja od lewej (1, 2, 3...). Offset = odległość od lewej krawędzi segmentu.'
-        '</div>',
-        unsafe_allow_html=True
-    )
-    st.code(
-        "Rysunek wału (widok z boku):\n"
-        "\n"
-        "  Seg 1          Seg 2              Seg 3          Seg 4\n"
-        "  Ø25, L=35      Ø30, L=20          Ø22, L=100     Ø25, L=35\n"
-        " ┌─────────┐┌────────────┐┌──────────────────────┐┌─────────┐\n"
-        " │         ││            ││                       ││         │\n"
-        " └─────────┘└────────────┘└──────────────────────┘└─────────┘\n"
-        "       ↑                           ↑                    ↑\n"
-        "   Łożysko A                  Koło pasowe           Łożysko B\n"
-        "  (środek = 17mm               (środek = 50mm       (środek = 17mm\n"
-        "   od lewej seg.1)              od lewej seg.3)      od lewej seg.4)\n"
-        "\n"
-        "Wpisz:\n"
-        "  Łożysko A:   Seg = 1,  Offset = 17\n"
-        "  Łożysko B:   Seg = 4,  Offset = 17\n"
-        "  Koło pasowe: Seg = 3,  Offset = 50\n"
-        "\n"
-        "Segmenty:\n"
-        "  Seg 1: dług=35,  śred=25\n"
-        "  Seg 2: dług=20,  śred=30   ← np. podcięcie pod pierścień ustalający\n"
-        "  Seg 3: dług=100, śred=22\n"
-        "  Seg 4: dług=35,  śred=25",
-        language=None
-    )
-
-    # ── 6. INTERPRETACJA WYNIKÓW ─────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 6 · Jak interpretować wyniki")
-
+    st.markdown("**Jak czytać parametry wału w programie?**")
     st.markdown("""
-**Kolory w tabeli wyników:**
-- ✔ **zielony** — warunek spełniony
-- ✘ **czerwony** — warunek niespełniony → zmień parametry (większa średnica, inny materiał)
-- ℹ **niebieski** — wartość informacyjna (nie ocenia spełnienia warunku)
+    - **Segmenty:** To klocki, z których budujesz wał, idąc od lewej strony. Każdy klocek ma długość i średnicę.
+    - **Lokalizacje (Offset):** Program pyta: *"Na którym klocku (Seg) i jak daleko od jego początku (Offset) leży środek elementu?"*
+    """)
 
-**Najważniejsze wskaźniki:**
-
-| Wskaźnik | Co znaczy | Wymaganie |
-|---|---|---|
-| **nz** | Współczynnik bezp. śruby (kr / σ_HMH) | ≥ 1.5 |
-| **sf** | Współczynnik bezp. wału (Re / σ_max) | ≥ 1.5 |
-| **Samohamowność** | Czy ładunek nie opadnie sam | TAK (ρ' > γ) |
-| **Ugięcie wału** | Max ugięcie vs. L/3000 | ≤ limit |
-| **Kąt w łożysku** | Kąt ugięcia osi wału | ≤ 0.001 rad |
-
-**Co zrobić gdy warunek nie jest spełniony?**
-- Śruba: wybierz wyższy zestaw materiałowy (C45 → 42CrMo4) lub zmniejsz siłę
-- Wał: zwiększ średnicę w miejscu gdzie jest największe naprężenie
-- Przekładnia: zwiększ szerokość pasa lub zmień podziałkę na większą
-""")
-
-    st.markdown(
-        '<div class="tip-box">💡 <b>Co program sprawdza dla wału?</b><br>'
-        '(1) Naprężenie HMH — maksymalne naprężenie zredukowane vs. Re materiału (wymagany sf ≥ 1.5)<br>'
-        '(2) Ugięcie — max ugięcie vs. L/3000 (warunek sztywności)<br>'
-        '(3) Kąty ugięcia w łożyskach — wymagane ≤ 0.001 rad dla łożysk tocznych<br>'
-        '(4) Dobór wpustu pryzmatycznego — automatycznie na podstawie średnicy w miejscu koła pasowego</div>',
-        unsafe_allow_html=True
+    st.code(
+        """
+        PRZYKŁAD:
+        Wał ma 3 segmenty:
+        [Seg 1: 30mm] -> [Seg 2: 50mm] -> [Seg 3: 30mm]
+        
+        Chcesz łożysko na środku Seg 1?
+        -> Seg: 1, Offset: 15 (połowa z 30)
+        
+        Chcesz koło pasowe na środku Seg 2?
+        -> Seg: 2, Offset: 25 (połowa z 50)
+        """, language=None
     )
 
-    st.markdown(
-        '<div class="warn-box">⚠️ <b>Siły obliczane automatycznie:</b> '
-        'Program sam pobiera moment skręcający i siłę od pasa z wyników sekcji Śruba i Przekładnia — '
-        'nie musisz ich wpisywać. Siła jest mnożona przez wsp. 2.5 (konserwatywny szacunek naciągu pasa) '
-        'który celowo "wybacza" niedokładności w geometrii wału.</div>',
-        unsafe_allow_html=True
-    )
+    # ── 3. INTERPRETACJA WYNIKÓW ────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### 3️⃣ Jak czytać wyniki? (Zielone vs Czerwone)")
 
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 🔩 Śruba")
+        st.markdown("""
+        - **Samohamowność:** Musi być <span style='color:#4caf84'>**TAK**</span>. Jeśli jest NIE – ładunek spadnie Ci na głowę po wyłączeniu silnika.
+          *Naprawa:* Zmniejsz skok gwintu (P) lub zmień średnicę.
+        - **nz (Wsp. bezpieczeństwa):** Musi być **> 1.5**.
+          *Naprawa:* Jeśli czerwone, weź lepszą stal (np. 42CrMo4) lub grubszą śrubę.
+        - **Wysokość nakrętki:** Powinna być w granicach 1.2 – 2.5 średnicy gwintu.
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("#### 🔧 Wały")
+        st.markdown("""
+        - **sf (Safety Factor):** Musi być **> 1.5**. Oznacza, że wał nie pęknie.
+          *Naprawa:* Zwiększ średnicę wału w miejscu, gdzie wykres naprężeń jest najwyższy.
+        - **Ugięcie:** Musi być mniejsze niż limit.
+          *Naprawa:* Zwiększ średnicę wału (sztywność zależy od średnicy w 4. potędze!).
+        - **Kąt w łożysku:** Musi być **< 0.001 rad**. Łożyska nie lubią krzywych wałów.
+        """, unsafe_allow_html=True)
+
+    st.markdown(
+        """
+        <div class="tip-box">
+        💡 <b>Wskazówka:</b>
+        Jeśli zmieniasz coś w panelu bocznym, kliknij <b>OBLICZ</b> ponownie. 
+        Dopiero gdy wszystko świeci się na zielono, idź do zakładki <b>Dokumentacja</b>, 
+        aby wygenerować PDF.
+        </div>
+        """, unsafe_allow_html=True
+    )
 
 # ==============================================================================
 # SIDEBAR
