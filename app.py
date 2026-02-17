@@ -196,14 +196,9 @@ def render_alerts(errors: list, warnings: list):
 
 
 def render_wykres(b64_str: str, caption: str = ""):
-    if not b64_str:
-        return
-    try:
-        import io
+    if b64_str:
         img_bytes = base64.b64decode(b64_str)
-        st.image(io.BytesIO(img_bytes), caption=caption, use_column_width=True)
-    except Exception as e:
-        st.error(f"Błąd renderowania wykresu: {e}")
+        st.image(img_bytes, caption=caption, use_container_width=True)
 
 
 def param_row(name: str, default: str, desc: str) -> str:
@@ -512,7 +507,7 @@ def sidebar_inputs() -> dict:
     sila_F        = st.sidebar.number_input("Siła osiowa F [N]",          100.0, 500000.0, 10000.0, 500.0)
     ramie_sily    = st.sidebar.number_input("Ramię siły e [mm]",            0.0,   2000.0,   200.0,  10.0)
     dlugosc_sruby = st.sidebar.number_input("Długość robocza śruby [mm]",  50.0,  10000.0,  1000.0,  50.0)
-    n_sruby       = st.sidebar.number_input("Prędkość śruby n₂ [obr/min]", 1.0,   2000.0,   177.5,  22.5)
+    n_sruby       = st.sidebar.number_input("Prędkość śruby n₂ [obr/min]", 1.0,   2000.0,   200.0,  10.0)
     h_element     = st.sidebar.number_input("Wys. elementu mocującego h [mm]", 10.0, 500.0,  130.0,   5.0)
     st.sidebar.caption("h ≈ wys. nakrętki — wpisz 130 wstępnie, po obliczeniach popraw na Hn+10 mm")
     alfa = st.sidebar.selectbox(
@@ -560,6 +555,13 @@ def sidebar_inputs() -> dict:
     podzialka = st.sidebar.selectbox("Podziałka pasa [mm]", [3, 5, 8, 14], index=1)
     szer_pas  = st.sidebar.number_input("Szerokość pasa b [mm]", 5.0, 100.0, 15.0, 5.0)
 
+    st.sidebar.markdown("### 4 · Łożysko wzdłużne")
+    loz_Lh  = st.sidebar.number_input("Żywotność L10h [h]", 500.0, 100000.0, 10000.0, 500.0)
+    loz_kat = st.sidebar.selectbox("Kąt działania α [°]", [15, 25, 30, 40, 45], index=2)
+    Y_map   = {15: 1.0, 25: 0.78, 30: 0.66, 40: 0.55, 45: 0.50}
+    loz_Y   = Y_map[loz_kat]
+    st.sidebar.caption(f"Współczynnik Y = {loz_Y} (z katalogu SKF)")
+
     return {
         "sila_F": sila_F, "ramie_sily": ramie_sily,
         "dlugosc_sruby": dlugosc_sruby, "n_sruby": n_sruby,
@@ -570,6 +572,7 @@ def sidebar_inputs() -> dict:
         "n1": n1, "z1": int(z1), "z2": int(z2),
         "podzialka": float(podzialka), "szerokosc": szer_pas,
         "hz": 2.1, "T_rob": 650.0, "m_metr": 0.360,
+        "loz_Lh": loz_Lh, "loz_Y": loz_Y,
     }
 
 
@@ -630,7 +633,22 @@ def section_wal(wyniki: dict, klucz: str, tytul: str):
     col4.metric("Limit ugięcia", f"{w.get('lim_ug',0):.4f} mm")
 
     if w.get("wykres_b64"):
-        render_wykres(w.get("wykres_b64", ""), tytul)
+        render_wykres(w["wykres_b64"], tytul)
+
+    with st.expander("📋 Szczegółowe kroki obliczeniowe"):
+        render_logs(w.get("logs", []))
+    render_alerts(w.get("errors", []), w.get("warnings", []))
+
+
+def section_lozysko(wyniki: dict):
+    st.markdown("## 🔵 Łożyskowanie")
+    w = wyniki.get("lozysko", {})
+    if "_error" in w:
+        st.error(w["_error"]); return
+
+    col1, col2 = st.columns(2)
+    col1.metric("Wymagana nośność C", f"{w.get('C_kN', 0):.2f} kN")
+    col2.metric("Żywotność L10h", f"{w.get('loz_Lh', 0):.0f} h")
 
     with st.expander("📋 Szczegółowe kroki obliczeniowe"):
         render_logs(w.get("logs", []))
@@ -665,19 +683,19 @@ def get_wal_config(numer: int, seg_default, loc_defaults) -> dict:
             "Offset = odległość od początku tego segmentu [mm]"
         )
         la1, la2, lb1, lb2, lf1, lf2 = st.columns(6)
-        sA = int(la1.number_input("Łoż.A — seg",     0, 9, loc_defaults[0][0], key=f"w{numer}_sA"))
-        oA =     la2.number_input("Łoż.A — offset",  0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
-        sB = int(lb1.number_input("Łoż.B — seg",     0, 9, loc_defaults[1][0], key=f"w{numer}_sB"))
-        oB =     lb2.number_input("Łoż.B — offset",  0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
-        sF = int(lf1.number_input("Koło — seg",      0, 9, loc_defaults[2][0], key=f"w{numer}_sF"))
-        oF =     lf2.number_input("Koło — offset",   0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
+        sA = int(la1.number_input("Łoż.A — seg",    1, 10, loc_defaults[0][0], key=f"w{numer}_sA"))
+        oA =     la2.number_input("Łoż.A — offset", 0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
+        sB = int(lb1.number_input("Łoż.B — seg",    1, 10, loc_defaults[1][0], key=f"w{numer}_sB"))
+        oB =     lb2.number_input("Łoż.B — offset", 0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
+        sF = int(lf1.number_input("Koło — seg",     1, 10, loc_defaults[2][0], key=f"w{numer}_sF"))
+        oF =     lf2.number_input("Koło — offset",  0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
 
     return {
         "nazwa": f"Wał {numer}: {'Silnik (Napędowy)' if numer == 1 else 'Śruba (Napędzany)'}",
         "segmenty": segmenty,
-        "loc_support_A": {"seg_idx": sA, "offset": oA},
-        "loc_support_B": {"seg_idx": sB, "offset": oB},
-        "loc_load":      {"seg_idx": sF, "offset": oF},
+        "loc_support_A": {"seg_idx": sA - 1, "offset": oA},
+        "loc_support_B": {"seg_idx": sB - 1, "offset": oB},
+        "loc_load":      {"seg_idx": sF - 1, "offset": oF},
     }
 
 
@@ -696,10 +714,11 @@ def tab_obliczenia(inp: dict):
     """, unsafe_allow_html=True)
 
     st.markdown("### Wybierz zakres obliczeń")
-    col_cb = st.columns(4)
+    col_cb = st.columns(5)
     run_sruba = col_cb[0].checkbox("Śruba + nakrętka",  True)
     run_przek = col_cb[1].checkbox("Przekładnia pasowa", True)
     run_waly  = col_cb[2].checkbox("Wały napędowe",     True)
+    run_loz   = col_cb[3].checkbox("Łożysko",           True)
 
     st.markdown("---")
 
@@ -709,12 +728,12 @@ def tab_obliczenia(inp: dict):
         wal1_cfg = get_wal_config(
             numer=1,
             seg_default=[(30, 28), (120, 20)],
-            loc_defaults=[(1, 11.0), (1, 109.0), (1, 60.0)],
+            loc_defaults=[(2, 11.0), (2, 109.0), (2, 60.0)],
         )
         wal2_cfg = get_wal_config(
             numer=2,
             seg_default=[(51, 20), (49.108, 22), (99.785, 24), (20.108, 22)],
-            loc_defaults=[(1, 42.108), (3, 7.0), (2, 49.892)],
+            loc_defaults=[(2, 42.108), (4, 7.0), (3, 49.892)],
         )
         st.markdown("---")
 
@@ -760,6 +779,13 @@ def tab_obliczenia(inp: dict):
             payload["wal1"] = {**wal1_cfg, "material": material}
         if run_waly and wal2_cfg:
             payload["wal2"] = {**wal2_cfg, "material": material}
+        if run_loz:
+            payload["lozysko"] = {
+                "Fw_kN": inp["sila_F"] / 1000,
+                "Lh": inp["loz_Lh"],
+                "Y": inp["loz_Y"],
+                "n_sruby": inp["n_sruby"],
+            }
         wyniki = call_api("pelny", payload)
 
     if "_error" in wyniki:
@@ -772,10 +798,11 @@ def tab_obliczenia(inp: dict):
     if run_waly:
         section_wal(wyniki, "wal1", "Wał 1: Silnik (Napędowy)")
         section_wal(wyniki, "wal2", "Wał 2: Śruba (Napędzany)")
+    if run_loz:    section_lozysko(wyniki)
 
     all_ok = all(
         wyniki.get(k, {}).get("ok", True)
-        for k in ["sruba", "przekladnia", "wal1", "wal2"]
+        for k in ["sruba", "przekladnia", "wal1", "wal2", "lozysko"]
         if k in wyniki
     )
     if all_ok:
