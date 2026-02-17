@@ -202,7 +202,7 @@ def render_wykres(b64_str: str, caption: str = ""):
     try:
         import io
         img_bytes = base64.b64decode(b64_str)
-        st.image(io.BytesIO(img_bytes), caption=caption, use_container_width=True)
+        st.image(io.BytesIO(img_bytes), caption=caption, use_column_width=True)
     except Exception as e:
         st.error(f"Błąd renderowania wykresu: {e} | Długość b64: {len(b64_str)} znaków")
 
