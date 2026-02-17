@@ -1,6 +1,5 @@
 """
-Klient API — wysyła żądania do prywatnego backendu obliczeniowego.
-Kod obliczeniowy pozostaje ukryty na serwerze.
+Klient API — wysyła żądania do backendu obliczeniowego.
 """
 
 import requests
