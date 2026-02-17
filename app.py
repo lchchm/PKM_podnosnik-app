@@ -197,8 +197,9 @@ def render_alerts(errors: list, warnings: list):
 
 def render_wykres(b64_str: str, caption: str = ""):
     if b64_str:
+        import io
         img_bytes = base64.b64decode(b64_str)
-        st.image(img_bytes, caption=caption, use_container_width=True)
+        st.image(io.BytesIO(img_bytes), caption=caption, use_container_width=True)
 
 
 def param_row(name: str, default: str, desc: str) -> str:
@@ -660,6 +661,11 @@ def section_lozysko(wyniki: dict):
 # ==============================================================================
 
 def get_wal_config(numer: int, seg_default, loc_defaults) -> dict:
+    # Klucz session_state dla liczby segmentów tego wału
+    key_n = f"w{numer}_n_seg"
+    if key_n not in st.session_state:
+        st.session_state[key_n] = len(seg_default)
+
     with st.expander(f"⚙️ Konfiguracja Wału {numer} — kliknij aby rozwinąć i wpisać własne wymiary",
                      expanded=False):
 
@@ -670,8 +676,24 @@ def get_wal_config(numer: int, seg_default, loc_defaults) -> dict:
 
         st.markdown("**Segmenty wału** — każdy stopień jako długość × średnica [mm]")
         st.caption("Numeruj od lewej do prawej zgodnie z rysunkiem złożeniowym")
+
+        # Przyciski + / - do zmiany liczby segmentów
+        btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 6])
+        with btn_col1:
+            if st.button("＋ Dodaj segment", key=f"w{numer}_add"):
+                st.session_state[key_n] = min(st.session_state[key_n] + 1, 10)
+        with btn_col2:
+            if st.button("－ Usuń segment", key=f"w{numer}_rem"):
+                st.session_state[key_n] = max(st.session_state[key_n] - 1, 1)
+
+        n_seg = st.session_state[key_n]
         segmenty = []
-        for i, (l_def, d_def) in enumerate(seg_default):
+        for i in range(n_seg):
+            # Domyślne wartości: z seg_default jeśli istnieje, inaczej ostatni znany
+            if i < len(seg_default):
+                l_def, d_def = seg_default[i]
+            else:
+                l_def, d_def = seg_default[-1]
             cs1, cs2 = st.columns(2)
             l = cs1.number_input(f"Seg {i+1} — dług. [mm]", 1.0, 2000.0, float(l_def), key=f"w{numer}_sl{i}")
             d = cs2.number_input(f"Seg {i+1} — śred. [mm]", 1.0,  200.0, float(d_def), key=f"w{numer}_sd{i}")
@@ -683,19 +705,19 @@ def get_wal_config(numer: int, seg_default, loc_defaults) -> dict:
             "Offset = odległość od początku tego segmentu [mm]"
         )
         la1, la2, lb1, lb2, lf1, lf2 = st.columns(6)
-        sA = int(la1.number_input("Łoż.A — seg",     0, 9, loc_defaults[0][0], key=f"w{numer}_sA"))
-        oA =     la2.number_input("Łoż.A — offset",  0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
-        sB = int(lb1.number_input("Łoż.B — seg",     0, 9, loc_defaults[1][0], key=f"w{numer}_sB"))
-        oB =     lb2.number_input("Łoż.B — offset",  0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
-        sF = int(lf1.number_input("Koło — seg",      0, 9, loc_defaults[2][0], key=f"w{numer}_sF"))
-        oF =     lf2.number_input("Koło — offset",   0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
+        sA = int(la1.number_input("Łoż.A — seg",    1, 10, loc_defaults[0][0], key=f"w{numer}_sA"))
+        oA =     la2.number_input("Łoż.A — offset", 0.0, 1000.0, loc_defaults[0][1], key=f"w{numer}_oA")
+        sB = int(lb1.number_input("Łoż.B — seg",    1, 10, loc_defaults[1][0], key=f"w{numer}_sB"))
+        oB =     lb2.number_input("Łoż.B — offset", 0.0, 1000.0, loc_defaults[1][1], key=f"w{numer}_oB")
+        sF = int(lf1.number_input("Koło — seg",     1, 10, loc_defaults[2][0], key=f"w{numer}_sF"))
+        oF =     lf2.number_input("Koło — offset",  0.0, 1000.0, loc_defaults[2][1], key=f"w{numer}_oF")
 
     return {
         "nazwa": f"Wał {numer}: {'Silnik (Napędowy)' if numer == 1 else 'Śruba (Napędzany)'}",
         "segmenty": segmenty,
-        "loc_support_A": {"seg_idx": sA, "offset": oA},
-        "loc_support_B": {"seg_idx": sB, "offset": oB},
-        "loc_load":      {"seg_idx": sF, "offset": oF},
+        "loc_support_A": {"seg_idx": sA - 1, "offset": oA},
+        "loc_support_B": {"seg_idx": sB - 1, "offset": oB},
+        "loc_load":      {"seg_idx": sF - 1, "offset": oF},
     }
 
 
