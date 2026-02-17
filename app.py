@@ -709,12 +709,12 @@ def tab_obliczenia(inp: dict):
         wal1_cfg = get_wal_config(
             numer=1,
             seg_default=[(30, 28), (120, 20)],
-            loc_defaults=[(2, 11.0), (2, 109.0), (2, 60.0)],
+            loc_defaults=[(1, 11.0), (1, 109.0), (1, 60.0)],
         )
         wal2_cfg = get_wal_config(
             numer=2,
             seg_default=[(51, 20), (49.108, 22), (99.785, 24), (20.108, 22)],
-            loc_defaults=[(2, 42.108), (4, 7.0), (3, 49.892)],
+            loc_defaults=[(1, 42.108), (3, 7.0), (2, 49.892)],
         )
         st.markdown("---")
 
