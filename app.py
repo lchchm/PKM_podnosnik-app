@@ -793,6 +793,103 @@ def tab_obliczenia(inp: dict):
     else:
         st.warning("⚠️ Niektóre warunki nie zostały spełnione — sprawdź czerwone wskaźniki powyżej.")
 
+# ==============================================================================
+# ZAKŁADKA: KALKULATOR ŁOŻYSKA
+# ==============================================================================
+
+def tab_kalkulator_lozyska(inp: dict):
+    st.markdown("""
+    <div style='margin-bottom:1rem;'>
+        <h1>🛡️ Kalkulator Łożysk (ISO 281)</h1>
+        <p style='color:#4a5a7a; font-size:0.88rem; margin-top:-0.5rem;'>
+            Weryfikacja trwałości i nośności wybranego łożyska
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.info(
+        "ℹ️ Ten moduł służy do sprawdzenia konkretnego łożyska z katalogu. "
+        "Wpisz dane z katalogu (C, C₀) i sprawdź czy wytrzyma zadane obciążenie."
+    )
+
+    col1, col2 = st.columns([1, 1.5])
+
+    with col1:
+        st.markdown("### 1. Parametry pracy")
+        typ_lozyska = st.selectbox("Typ łożyska", [
+            "kulkowe_skosne_dwurzedowe",
+            "kulkowe_jednorzedowe",
+            "kulkowe_oporowe",
+            "walcowe_oporowe",
+            "stozkowe",
+            "barylkowe_oporowe"
+        ])
+        
+        # Domyślne wartości pobieramy z bocznego panelu (inp), ale pozwalamy edytować
+        Fa_N = st.number_input("Siła osiowa Fa [N]", 0.0, 500000.0, float(inp.get("sila_F", 10000.0)))
+        Fr_N = st.number_input("Siła promieniowa Fr [N]", 0.0, 500000.0, 0.0)
+        n_ obr = st.number_input("Prędkość n [obr/min]", 0.0, 10000.0, float(inp.get("n_sruby", 177.5)))
+        Lh_wym = st.number_input("Wymagana trwałość Lh [h]", 100.0, 100000.0, 10000.0)
+
+    with col2:
+        st.markdown("### 2. Dane z katalogu łożyska")
+        c1, c2 = st.columns(2)
+        d_wew = c1.number_input("Średnica wew. d [mm]", 10.0, 500.0, 30.0)
+        
+        st.markdown("---")
+        c3, c4 = st.columns(2)
+        C_kat = c3.number_input("Nośność dyn. C [kN]", 1.0, 5000.0, 30.0)
+        C0_kat = c4.number_input("Nośność stat. C₀ [kN]", 1.0, 5000.0, 20.0)
+        
+        st.markdown("---")
+        st.markdown("**Współczynniki obciążenia (z katalogu):**")
+        c5, c6 = st.columns(2)
+        X = c5.number_input("Współczynnik X", 0.0, 10.0, 0.67)
+        Y = c6.number_input("Współczynnik Y", 0.0, 10.0, 0.67)
+
+    st.markdown("---")
+    
+    if st.button("🧮 SPRAWDŹ ŁOŻYSKO", use_container_width=True):
+        payload = {
+            "typ": typ_lozyska,
+            "Fa_N": Fa_N, "Fr_N": Fr_N, "n": n_obr,
+            "Lh_wymagane": Lh_wym,
+            "C_kat": C_kat, "C0_kat": C0_kat,
+            "X": X, "Y": Y, "d_wew": d_wew
+        }
+        
+        with st.spinner("Liczenie..."):
+            wynik = call_api("lozysko_kalkulator", payload)
+        
+        if "_error" in wynik:
+            st.error(wynik["_error"])
+        else:
+            # Wyświetlanie wyników
+            st.markdown("### Wyniki weryfikacji")
+            
+            w1, w2, w3, w4 = st.columns(4)
+            w1.metric("Wymagane C", f"{wynik.get('C_wym_kN', 0):.2f} kN")
+            w2.metric("Katalogowe C", f"{C_kat:.2f} kN", 
+                      delta=f"{C_kat - wynik.get('C_wym_kN', 0):.2f} kN")
+            
+            Lh_os = wynik.get('Lh_osiagalne', 0)
+            lh_str = f"{Lh_os:.0f} h" if Lh_os < 900000 else "> 900 000 h"
+            w3.metric("Trwałość L10h", lh_str)
+            
+            s0 = wynik.get('s0', 0)
+            w4.metric("Bezpieczeństwo s₀", f"{s0:.2f}")
+
+            # Szczegóły i alerty
+            with st.expander("📋 Szczegółowe wyniki", expanded=True):
+                render_logs(wynik.get("logs", []))
+            
+            render_alerts(wynik.get("errors", []), wynik.get("warnings", []))
+            
+            if wynik.get("ok"):
+                st.success("✅ Łożysko dobrane poprawnie!")
+            else:
+                st.error("❌ Łożysko nie spełnia wymagań.")
+
 
 # ==============================================================================
 # MAIN
