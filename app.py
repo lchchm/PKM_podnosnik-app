@@ -196,10 +196,15 @@ def render_alerts(errors: list, warnings: list):
 
 
 def render_wykres(b64_str: str, caption: str = ""):
-    if b64_str:
+    if not b64_str:
+        st.warning(f"Brak wykresu: {caption}")
+        return
+    try:
         import io
         img_bytes = base64.b64decode(b64_str)
         st.image(io.BytesIO(img_bytes), caption=caption, use_container_width=True)
+    except Exception as e:
+        st.error(f"Błąd renderowania wykresu: {e} | Długość b64: {len(b64_str)} znaków")
 
 
 def param_row(name: str, default: str, desc: str) -> str:
@@ -634,7 +639,7 @@ def section_wal(wyniki: dict, klucz: str, tytul: str):
     col4.metric("Limit ugięcia", f"{w.get('lim_ug',0):.4f} mm")
 
     if w.get("wykres_b64"):
-        render_wykres(w["wykres_b64"], tytul)
+        render_wykres(w.get("wykres_b64", ""), tytul)
 
     with st.expander("📋 Szczegółowe kroki obliczeniowe"):
         render_logs(w.get("logs", []))
